@@ -1,0 +1,3 @@
+feedparser
+slack_sdk
+pytz
