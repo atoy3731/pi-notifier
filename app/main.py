@@ -12,6 +12,7 @@ from pytz import timezone
 # Default to 15min
 CHECK_INTERVAL = int(os.environ.get('CHECK_INTERVAL_SECS', '60'))
 FILTERS = os.environ.get('FILTERS', '')
+COUNTRY = os.environ.get('COUNTRY', '')
 PI_LOCATOR_TZ = os.environ.get('PI_LOCATOR_TZ', 'GMT')
 LOCAL_TZ = os.environ.get('LOCAL_TZ', 'EST')
 
@@ -35,12 +36,15 @@ def _convertTimezone(lastUpdate, tz):
     pre_time = pre_tz.localize(lastUpdate, is_dst=None)
     return pre_time.astimezone(timezone(PI_LOCATOR_TZ))
 
+
 def _getItemsForChannel(xmlUrl, lastUpdate):
     socket.setdefaulttimeout(60)
 
     parsed = feedparser.parse(xmlUrl)
-    items = [entry for entry in parsed.entries if
-             _convertTimezone(datetime.fromtimestamp(mktime(entry.updated_parsed)), PI_LOCATOR_TZ) > _convertTimezone(datetime.fromisoformat(lastUpdate), LOCAL_TZ)]
+    if COUNTRY == '':
+        items = [entry for entry in parsed.entries if _convertTimezone(datetime.fromtimestamp(mktime(entry.updated_parsed)), PI_LOCATOR_TZ) > _convertTimezone(datetime.fromisoformat(lastUpdate), LOCAL_TZ)]
+    else:
+        items = [entry for entry in parsed.entries if (_convertTimezone(datetime.fromtimestamp(mktime(entry.updated_parsed)), PI_LOCATOR_TZ) > _convertTimezone(datetime.fromisoformat(lastUpdate), LOCAL_TZ) and (entry.tags[1].term == COUNTRY))]
 
     if len(FILTERS_ARRAY) > 0:
         filtered_items = []
@@ -97,8 +101,9 @@ def _notify(items):
 if __name__ == '__main__':
     print("Starting PiNotify..")
     print("  Channel:\t{}".format(SLACK_CHANNEL))
-    print("  Filters:\t{}".format(FILTERS))
-    print("  Interval:\t{}".format(CHECK_INTERVAL))
+    print("  Filters:\t{}".format(FILTERS if FILTERS != '' else '(None Supplied)'))
+    print("  Country:\t{}".format(COUNTRY if COUNTRY != '' else '(None Supplied)'))
+    print("  Interval:\t{}s".format(CHECK_INTERVAL))
     _getFiltersArray()
 
     while True:
