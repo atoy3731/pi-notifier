@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  pi-notifier:
+    image: atoy3731/pi-notifier:1.5
+    container_name: pi-notifier
+    restart: always
+    environment:
+      - CHECK_INTERVAL=60
+      - SLACK_TOKEN=abcdef12345
+      - SLACK_CHANNEL=#pi-notifier
+      - PROCESS_INIT=false
