@@ -19,22 +19,18 @@ LOCAL_TZ = os.environ.get('LOCAL_TZ', 'EST')
 SLACK_TOKEN = os.environ.get('SLACK_TOKEN')
 SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL', '#pi-notify')
 
+PROCESS_INIT = os.environ.get('PROCESS_INIT', 'true')
 
 FILTERS_ARRAY = []
 slack_client = WebClient(token=os.environ['SLACK_TOKEN'])
 last_item_id = ''
+
 
 def _getFiltersArray():
     global FILTERS_ARRAY
 
     if FILTERS != '':
         FILTERS_ARRAY = list(map(str.strip, FILTERS.split(',')))
-
-
-def _convertTimezone(lastUpdate, tz):
-    pre_tz = timezone(tz)
-    pre_time = pre_tz.localize(lastUpdate, is_dst=None)
-    return pre_time.astimezone(timezone(PI_LOCATOR_TZ))
 
 
 def _getInitialItem(xmlUrl):
@@ -68,13 +64,19 @@ def _getItemsForChannel(xmlUrl):
                     matches = False
                     break
             if matches:
-                if COUNTRY != '' and item.tags[0].term == COUNTRY:
-                    filtered_items.append(item)
+                if COUNTRY != '':
+                    for tag in item.tags:
+                        if tag.term == COUNTRY:
+                            filtered_items.append(item)
+                            break
                 else:
                     filtered_items.append(item)
         else:
-            if COUNTRY != '' and item.term == COUNTRY:
-                filtered_items.append(item)
+            if COUNTRY != '':
+                for tag in item.tags:
+                    if tag.term == COUNTRY:
+                        filtered_items.append(item)
+                        break
             else:
                 filtered_items.append(item)
 
@@ -127,12 +129,12 @@ if __name__ == '__main__':
     print("  Interval:\t{}s".format(CHECK_INTERVAL))
 
     _getFiltersArray()
-    _getInitialItem('https://rpilocator.com/feed/')
+
+    if PROCESS_INIT.lower() != 'true':
+        _getInitialItem('https://rpilocator.com/feed/')
 
     while True:
         items = _getItemsForChannel('https://rpilocator.com/feed/')
-
-        print(items)
 
         if len(items) > 0:
             _notify(items)
