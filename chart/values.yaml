@@ -1,0 +1,14 @@
+replicaCount: 1
+
+image:
+  repository: atoy3731/pi-notifier
+  pullPolicy: Always 
+  tag: "1.5"
+
+config:
+  slackToken: your-token-here # Token for Slack
+  slackChannel: your-channel-here # Channel for notification
+  filters: csv-of-filters # IE. "CM4,8GB RAM"
+  country: '' # IE. US
+  interval: 60 # In seconds
+  processInit: false # Whether to process the initial RSS list or just process future entries
