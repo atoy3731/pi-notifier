@@ -6,11 +6,11 @@ Silly-simple tool to send a notification to Slack when RPis are available. Lever
 
 | Environment Variables | Description | Required | Default |
 |---|---|---|---|
+| SLACK_TOKEN | Slack API Token to publish messages to channel | Yes |  |
+| SLACK_CHANNEL | Slack channel to publish to | Yes | #pi-notify |
 | CHECK_INTERVAL | Interval in Seconds to Check | No | 60 |
 | FILTERS | Comma-Separated List of Filters (against the Summary) | No |  |
 | COUNTRY | Country Filter | No |  |
-| SLACK_TOKEN | Slack API Token to publish messages to channel | Yes |  |
-| SLACK_CHANNEL | Slack channel to publish to | Yes | #pi-notify |
 | PROCESS_INIT | Whether to process the initial list of RSS entries or just new entries | No | true |
 
 ## Installation
