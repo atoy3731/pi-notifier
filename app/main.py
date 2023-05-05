@@ -22,7 +22,7 @@ SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL', '#pi-notify')
 
 FILTERS_ARRAY = []
 slack_client = WebClient(token=os.environ['SLACK_TOKEN'])
-
+last_item_id = ''
 
 def _getFiltersArray():
     global FILTERS_ARRAY
@@ -37,28 +37,49 @@ def _convertTimezone(lastUpdate, tz):
     return pre_time.astimezone(timezone(PI_LOCATOR_TZ))
 
 
-def _getItemsForChannel(xmlUrl, lastUpdate):
+def _getInitialItem(xmlUrl):
+    global last_item_id
+
     socket.setdefaulttimeout(60)
 
     parsed = feedparser.parse(xmlUrl)
-    if COUNTRY == '':
-        items = [entry for entry in parsed.entries if _convertTimezone(datetime.fromtimestamp(mktime(entry.updated_parsed)), PI_LOCATOR_TZ) > _convertTimezone(datetime.fromisoformat(lastUpdate), LOCAL_TZ)]
-    else:
-        items = [entry for entry in parsed.entries if (_convertTimezone(datetime.fromtimestamp(mktime(entry.updated_parsed)), PI_LOCATOR_TZ) > _convertTimezone(datetime.fromisoformat(lastUpdate), LOCAL_TZ) and (entry.tags[1].term == COUNTRY))]
+    items = [entry for entry in parsed.entries]
+    last_item_id = items[0].id
 
-    if len(FILTERS_ARRAY) > 0:
-        filtered_items = []
-        for item in items:
+
+def _getItemsForChannel(xmlUrl):
+    global last_item_id
+
+    socket.setdefaulttimeout(60)
+
+    parsed = feedparser.parse(xmlUrl)
+    items = [entry for entry in parsed.entries]
+    new_item_id = items[0].id
+
+    filtered_items = []
+    for item in items:
+        if item.id == last_item_id:
+            break
+
+        if len(FILTERS_ARRAY) > 0:
             matches = True
             for filter in FILTERS_ARRAY:
-                if filter not in item['description']:
+                if filter not in item.summary:
                     matches = False
                     break
             if matches:
+                if COUNTRY != '' and item.tags[0].term == COUNTRY:
+                    filtered_items.append(item)
+                else:
+                    filtered_items.append(item)
+        else:
+            if COUNTRY != '' and item.term == COUNTRY:
                 filtered_items.append(item)
-        return filtered_items
-    else:
-        return items
+            else:
+                filtered_items.append(item)
+
+    last_item_id = new_item_id
+    return filtered_items
 
 
 def _notify(items):
@@ -104,10 +125,14 @@ if __name__ == '__main__':
     print("  Filters:\t{}".format(FILTERS if FILTERS != '' else '(None Supplied)'))
     print("  Country:\t{}".format(COUNTRY if COUNTRY != '' else '(None Supplied)'))
     print("  Interval:\t{}s".format(CHECK_INTERVAL))
+
     _getFiltersArray()
+    _getInitialItem('https://rpilocator.com/feed/')
 
     while True:
-        items = _getItemsForChannel('https://rpilocator.com/feed/', (datetime.now() - timedelta(seconds=CHECK_INTERVAL)).isoformat())
+        items = _getItemsForChannel('https://rpilocator.com/feed/')
+
+        print(items)
 
         if len(items) > 0:
             _notify(items)
